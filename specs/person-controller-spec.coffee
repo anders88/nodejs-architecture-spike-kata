@@ -14,26 +14,23 @@ describe 'Person controller', ->
     handler.dom
     
   req = new Object()
-  res = new Object()
+  res = {
+    writeHead : () ->
+    end : (html) -> res.dom = parse_html(html)
+  }
   
   it "shows menu with links", ->
-    dom = null
-    res.writeHead = () ->
-    res.end = (html) ->
-      dom = parse_html(html)
     personweb.process({method:'GET',url:'/'}, res)
-    links = select(dom, "ul#menu li a")
+    links = select(res.dom, "ul#menu li a")
     link_titles = links.map((n) -> n.children[0].data)
     expect(link_titles).toEqual ["Create person", "Find people"]
     
   it "shows create form", ->
-    dom = null
     res.writeHead = () ->
-    res.end = (html) ->
-      dom = parse_html(html)
+    res.end = (html) -> res.dom = parse_html(html)
     personweb.process({method:'GET',url:'/person/create.html'}, res)
-    expect(select(dom, 'form[method="post"] input[name="full_name"]')[0].attribs.type).toEqual("text")
-    expect(select(dom, 'form[method="post"] input[type="submit"]')[0].attribs.value).toEqual("Create person")
+    expect(select(res.dom, 'form[method="post"] input[name="full_name"]')[0].attribs.type).toEqual("text")
+    expect(select(res.dom, 'form[method="post"] input[type="submit"]')[0].attribs.value).toEqual("Create person")
 
   it "creates person", ->
     headers = {}
@@ -46,8 +43,7 @@ describe 'Person controller', ->
       req.callbacks[name] = callback
     createdPerson = null
     personweb.setPersonDao({
-      create_person : (person) ->
-        createdPerson = person
+      create_person : (person) -> createdPerson = person
     })
     personweb.process(req, res)
     parameters = querystring.stringify(full_name: "Darth Vader")
@@ -57,4 +53,35 @@ describe 'Person controller', ->
     expect(headers["Location"]).toEqual("/")
     expect(res.statusCode).toEqual(301)
     expect(createdPerson).toEqual(new Person("Darth Vader"))
+    
+  it "shows search form", ->
+    personweb.setPersonDao({ find_people : () -> [] })
+    personweb.process({method:'GET',url:'/person/list.html'}, res)
+    expect(select(res.dom, 'form[method="get"] input[name="name_query"]')[0].attribs.value).toEqual("")
+    expect(select(res.dom, 'form[method="get"] input[name="name_query"]')[0].attribs.type).toEqual("text")
+    expect(select(res.dom, 'form[method="get"] input[type="submit"]')[0].attribs.value).toEqual("Find people")    
+    
+  it "searches for people", ->
+    queriedName = null
+    personweb.setPersonDao({
+      find_people : (nameQuery) -> queriedName = nameQuery; []
+    })
+    params = querystring.stringify(name_query: "vader")
+    personweb.process({method:'GET',url:"/person/list.html?#{params}"}, res)
+    expect(queriedName).toEqual("vader")
+
+  it "displays search result", ->
+    personweb.setPersonDao({
+      find_people : () -> [new Person("Anakin Skywalker"), new Person("Darth Vader")]
+    })
+    params = querystring.stringify(name_query: "whatever")
+    personweb.process({method:'GET',url:"/person/list.html?#{params}"}, res)
+    results = select(res.dom, '#results li').map((n) -> n.children[0].data)
+    expect(results).toEqual ["Anakin Skywalker", "Darth Vader"]
+    
+  it "echoes search string", ->
+    personweb.setPersonDao({ find_people : () -> [] })
+    params = querystring.stringify(name_query: "vader")
+    personweb.process({method:'GET',url:"/person/list.html?#{params}"}, res)
+    expect(select(res.dom, 'form[method="get"] input[name="name_query"]')[0].attribs.value).toEqual("vader")
     

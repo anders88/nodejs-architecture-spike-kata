@@ -1,38 +1,36 @@
 personweb = require('../person-controller')
 htmlparser = require('htmlparser')
 util = require('util')
+select = require('soupselect').select
 
 describe 'Person controller', ->
 
-  it "shows menu", ->
-    page = personweb.display_menu()
-    expect(page).toContain "<ul"
-    expect(page).toContain '<a href="person/create.html">'
-    expect(page).toContain '<a href="person/list.html">'
-
-  it "serves valid html", ->
-    error = true
-    handler = new htmlparser.DefaultHandler (parse_error,dom)->
-      error = parse_error
-    parser = new htmlparser.Parser(handler)
-    parser.parseComplete(personweb.display_menu())
-    expect(error).not.toBeTruthy()
-    
-   it "has a create person link", ->
+  parse_html = (html) ->
     handler = new htmlparser.DefaultHandler
     parser = new htmlparser.Parser(handler)
-    parser.parseComplete(personweb.display_menu())
-    menu = handler.dom[0].children[3].children[1]
-    expect(menu.name).toEqual("ul")
-    expect(menu.attribs.id).toEqual("menu")
-    expect(menu.children[1].name).toEqual("li")
-    expect(menu.children[1].children[0].name).toEqual("a")
-    expect(menu.children[1].children[0].children[0].data).toEqual("Create person")
-    expect(menu.children[3].name).toEqual("li")
-    expect(menu.children[3].children[0].name).toEqual("a")
-    expect(menu.children[3].children[0].attribs.href).toEqual("person/list.html")
-    expect(menu.children[3].children[0].children[0].data).toEqual("Find people")
-    # Wishlist:
-    # expect($(dom, "ul#menu li[1] a").text()).toEqual("Find people")
+    parser.parseComplete(html)
+    handler.dom
     
+  req = new Object()
+  res = new Object()
+  
+  it "shows menu with links", ->
+    dom = null
+    res.writeHead = () ->
+    res.end = (html) ->
+      dom = parse_html(html)
+    req.url = "/"
+    personweb.process(req, res)
+    links = select(dom, "ul#menu li a")
+    link_titles = links.map((n) -> n.children[0].data)
+    expect(link_titles).toEqual ["Create person", "Find people"]
     
+  it "shows create form", ->
+    dom = null
+    res.writeHead = () ->
+    res.end = (html) ->
+      dom = parse_html(html)
+    req.url = "/person/create.html"
+    personweb.process(req, res)
+    expect(select(dom, 'form[method="post"] input[name="full_name"]')[0].attribs.type).toEqual("text")
+    expect(select(dom, 'form[method="post"] input[type="submit"]')[0].attribs.value).toEqual("Create person")

@@ -1,0 +1,16 @@
+The architecture spike kata done in node.js.
+
+Setup:
+- Install node.js
+- Install dependencies
+-- npm install phantom
+-- npm install soupselect
+-- npm install htmlparser
+
+Update NODE_PATH if nessessary
+
+To run tests:
+jasmine-node --coffee (in workdir)
+
+To start server:
+coffee person-web.coffee 7777

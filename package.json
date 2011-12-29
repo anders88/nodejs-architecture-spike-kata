@@ -1,0 +1,13 @@
+{
+  "author": "",
+  "name": "js-architecture-spike-kata",
+  "version": "0.0.0",
+  "repository": {
+    "url": ""
+  },
+  "engines": {
+    "node": "~0.6.6"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

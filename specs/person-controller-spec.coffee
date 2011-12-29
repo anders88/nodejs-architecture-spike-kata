@@ -13,11 +13,11 @@ describe 'Person controller', ->
     parser.parseComplete(html)
     handler.dom
     
-  req = new Object()
-  res = {
+  res = 
+    headers : {}
     writeHead : () ->
     end : (html) -> res.dom = parse_html(html)
-  }
+    setHeader : (name,value) -> @headers[name] = value
   
   it "shows menu with links", ->
     personweb.process({method:'GET',url:'/'}, res)
@@ -33,24 +33,19 @@ describe 'Person controller', ->
     expect(select(res.dom, 'form[method="post"] input[type="submit"]')[0].attribs.value).toEqual("Create person")
 
   it "creates person", ->
-    headers = {}
-    res.setHeader = (name,value) ->
-      headers[name] = value
-    req.url = "/person/create.html"
-    req.method = 'POST'
-    req.callbacks = []
-    req.on = (name,callback) ->
-      req.callbacks[name] = callback
+    req =
+      url : "/person/create.html"
+      method : 'POST'
+      callbacks : []
+      on : (name,callback) -> @callbacks[name] = callback
     createdPerson = null
     personweb.setPersonDao({
       create_person : (person) -> createdPerson = person
     })
     personweb.process(req, res)
-    parameters = querystring.stringify(full_name: "Darth Vader")
-    req.callbacks["data"](parameters[0...10])
-    req.callbacks["data"](parameters[10..-1])
+    req.callbacks["data"](querystring.stringify(full_name: "Darth Vader"))
     req.callbacks["end"]()
-    expect(headers["Location"]).toEqual("/")
+    expect(res.headers["Location"]).toEqual("/")
     expect(res.statusCode).toEqual(301)
     expect(createdPerson).toEqual(new Person("Darth Vader"))
     

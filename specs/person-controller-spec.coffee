@@ -1,8 +1,10 @@
 util = require('util')
 querystring = require('querystring')
-personweb = require('../person-controller')
+
 htmlparser = require('htmlparser')
 select = require('soupselect').select
+
+personweb = require('../person-controller')
 Person = require('../person').Person
 
 describe 'Person controller', ->

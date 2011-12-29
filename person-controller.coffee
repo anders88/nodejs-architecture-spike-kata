@@ -3,19 +3,29 @@ url = require('url')
 Person = require('./person').Person
 
 exports.process = (req,res) ->
-  res.writeHead(200, 'Content-Type':'text/html')
   parsed_url = url.parse(req.url,true)
   if (req.method == 'POST')
     create_person(req,res)  
   else if (parsed_url.pathname == "/person/list.html")
+    res.writeHead(200, 'Content-Type':'text/html')
     res.end(display_search_form(parsed_url.query))
   else if (req.url == "/person/create.html")
+    res.writeHead(200, 'Content-Type':'text/html')
     res.end(display_create_form())
   else
+    res.writeHead(200, 'Content-Type':'text/html')
     res.end(display_menu())
     
 
-personDao = null
+
+class InmemoryPersonDao
+  constructor : () -> @people = []
+  create_person : (person) -> @people.push(person)
+  find_people : (name_query) -> @people
+
+personDao = new InmemoryPersonDao()
+
+  
 exports.setPersonDao = (newPersonDao) -> personDao = newPersonDao
 
 display_menu = ->
@@ -57,7 +67,7 @@ create_person = (req,res) ->
   data = ""
   req.on("data", (chunk) -> data += chunk)
   req.on "end", () -> 
-    res.setHeader("Location", "/")
-    res.statusCode = 301    
     personDao.create_person(new Person(querystring.parse(data).full_name))
-  ""
+    res.setHeader("Location", "/")
+    res.statusCode = 301
+    res.end()
